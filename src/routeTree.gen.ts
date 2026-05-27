@@ -15,6 +15,7 @@ import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppPedidosRouteImport } from './routes/_app/pedidos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
 import { Route as AppFichasTecnicasRouteImport } from './routes/_app/fichas-tecnicas'
+import { Route as AppEstoqueRouteImport } from './routes/_app/estoque'
 import { Route as AppCozinhaRouteImport } from './routes/_app/cozinha'
 
 const AppRoute = AppRouteImport.update({
@@ -46,6 +47,11 @@ const AppFichasTecnicasRoute = AppFichasTecnicasRouteImport.update({
   path: '/fichas-tecnicas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppEstoqueRoute = AppEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCozinhaRoute = AppCozinhaRouteImport.update({
   id: '/cozinha',
   path: '/cozinha',
@@ -55,6 +61,7 @@ const AppCozinhaRoute = AppCozinhaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/cozinha': typeof AppCozinhaRoute
+  '/estoque': typeof AppEstoqueRoute
   '/fichas-tecnicas': typeof AppFichasTecnicasRoute
   '/pdv': typeof AppPdvRoute
   '/pedidos': typeof AppPedidosRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/cozinha': typeof AppCozinhaRoute
+  '/estoque': typeof AppEstoqueRoute
   '/fichas-tecnicas': typeof AppFichasTecnicasRoute
   '/pdv': typeof AppPdvRoute
   '/pedidos': typeof AppPedidosRoute
@@ -72,6 +80,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/cozinha': typeof AppCozinhaRoute
+  '/_app/estoque': typeof AppEstoqueRoute
   '/_app/fichas-tecnicas': typeof AppFichasTecnicasRoute
   '/_app/pdv': typeof AppPdvRoute
   '/_app/pedidos': typeof AppPedidosRoute
@@ -83,16 +92,25 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/cozinha'
+    | '/estoque'
     | '/fichas-tecnicas'
     | '/pdv'
     | '/pedidos'
     | '/produtos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/cozinha' | '/fichas-tecnicas' | '/pdv' | '/pedidos' | '/produtos' | '/'
+  to:
+    | '/cozinha'
+    | '/estoque'
+    | '/fichas-tecnicas'
+    | '/pdv'
+    | '/pedidos'
+    | '/produtos'
+    | '/'
   id:
     | '__root__'
     | '/_app'
     | '/_app/cozinha'
+    | '/_app/estoque'
     | '/_app/fichas-tecnicas'
     | '/_app/pdv'
     | '/_app/pedidos'
@@ -148,6 +166,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFichasTecnicasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/estoque': {
+      id: '/_app/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof AppEstoqueRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/cozinha': {
       id: '/_app/cozinha'
       path: '/cozinha'
@@ -160,6 +185,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCozinhaRoute: typeof AppCozinhaRoute
+  AppEstoqueRoute: typeof AppEstoqueRoute
   AppFichasTecnicasRoute: typeof AppFichasTecnicasRoute
   AppPdvRoute: typeof AppPdvRoute
   AppPedidosRoute: typeof AppPedidosRoute
@@ -169,6 +195,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppCozinhaRoute: AppCozinhaRoute,
+  AppEstoqueRoute: AppEstoqueRoute,
   AppFichasTecnicasRoute: AppFichasTecnicasRoute,
   AppPdvRoute: AppPdvRoute,
   AppPedidosRoute: AppPedidosRoute,
