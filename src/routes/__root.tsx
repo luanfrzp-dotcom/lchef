@@ -72,14 +72,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "teste lchef" },
+      { name: "description", content: "L'Chef Command Center is a comprehensive web application for managing a premium café and gastronomic operation." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "teste lchef" },
+      { property: "og:description", content: "L'Chef Command Center is a comprehensive web application for managing a premium café and gastronomic operation." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "teste lchef" },
+      { name: "twitter:description", content: "L'Chef Command Center is a comprehensive web application for managing a premium café and gastronomic operation." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d036beec-884c-498c-9059-637d21c44b4a/id-preview-eb91683b--57d025ff-3ff3-4e50-a07c-a92c8173ee80.lovable.app-1779908786648.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d036beec-884c-498c-9059-637d21c44b4a/id-preview-eb91683b--57d025ff-3ff3-4e50-a07c-a92c8173ee80.lovable.app-1779908786648.png" },
     ],
     links: [
       {
