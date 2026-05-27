@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppPedidosRouteImport } from './routes/_app/pedidos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
 
 const AppRoute = AppRouteImport.update({
@@ -22,6 +23,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPedidosRoute = AppPedidosRouteImport.update({
+  id: '/pedidos',
+  path: '/pedidos',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPdvRoute = AppPdvRouteImport.update({
   id: '/pdv',
   path: '/pdv',
@@ -31,23 +37,26 @@ const AppPdvRoute = AppPdvRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/pdv': typeof AppPdvRoute
+  '/pedidos': typeof AppPedidosRoute
 }
 export interface FileRoutesByTo {
   '/pdv': typeof AppPdvRoute
+  '/pedidos': typeof AppPedidosRoute
   '/': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/pdv': typeof AppPdvRoute
+  '/_app/pedidos': typeof AppPedidosRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pdv'
+  fullPaths: '/' | '/pdv' | '/pedidos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/pdv' | '/'
-  id: '__root__' | '/_app' | '/_app/pdv' | '/_app/'
+  to: '/pdv' | '/pedidos' | '/'
+  id: '__root__' | '/_app' | '/_app/pdv' | '/_app/pedidos' | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -70,6 +79,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pedidos': {
+      id: '/_app/pedidos'
+      path: '/pedidos'
+      fullPath: '/pedidos'
+      preLoaderRoute: typeof AppPedidosRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/pdv': {
       id: '/_app/pdv'
       path: '/pdv'
@@ -82,11 +98,13 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppPdvRoute: typeof AppPdvRoute
+  AppPedidosRoute: typeof AppPedidosRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppPdvRoute: AppPdvRoute,
+  AppPedidosRoute: AppPedidosRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
