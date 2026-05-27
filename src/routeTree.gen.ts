@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppPedidosRouteImport } from './routes/_app/pedidos'
 import { Route as AppPdvRouteImport } from './routes/_app/pdv'
+import { Route as AppCozinhaRouteImport } from './routes/_app/cozinha'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -33,13 +34,20 @@ const AppPdvRoute = AppPdvRouteImport.update({
   path: '/pdv',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCozinhaRoute = AppCozinhaRouteImport.update({
+  id: '/cozinha',
+  path: '/cozinha',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/cozinha': typeof AppCozinhaRoute
   '/pdv': typeof AppPdvRoute
   '/pedidos': typeof AppPedidosRoute
 }
 export interface FileRoutesByTo {
+  '/cozinha': typeof AppCozinhaRoute
   '/pdv': typeof AppPdvRoute
   '/pedidos': typeof AppPedidosRoute
   '/': typeof AppIndexRoute
@@ -47,16 +55,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_app/cozinha': typeof AppCozinhaRoute
   '/_app/pdv': typeof AppPdvRoute
   '/_app/pedidos': typeof AppPedidosRoute
   '/_app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/pdv' | '/pedidos'
+  fullPaths: '/' | '/cozinha' | '/pdv' | '/pedidos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/pdv' | '/pedidos' | '/'
-  id: '__root__' | '/_app' | '/_app/pdv' | '/_app/pedidos' | '/_app/'
+  to: '/cozinha' | '/pdv' | '/pedidos' | '/'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/_app/cozinha'
+    | '/_app/pdv'
+    | '/_app/pedidos'
+    | '/_app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,16 +108,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPdvRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/cozinha': {
+      id: '/_app/cozinha'
+      path: '/cozinha'
+      fullPath: '/cozinha'
+      preLoaderRoute: typeof AppCozinhaRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCozinhaRoute: typeof AppCozinhaRoute
   AppPdvRoute: typeof AppPdvRoute
   AppPedidosRoute: typeof AppPedidosRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCozinhaRoute: AppCozinhaRoute,
   AppPdvRoute: AppPdvRoute,
   AppPedidosRoute: AppPedidosRoute,
   AppIndexRoute: AppIndexRoute,
