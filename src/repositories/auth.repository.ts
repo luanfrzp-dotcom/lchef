@@ -34,10 +34,23 @@ export const authRepository = {
       .from("users")
       .select("id,name,email,role_id,unit_id,active")
       .eq("id", authData.user.id)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) return undefined;
-    return mapUser(data);
+    if (data) return mapUser(data);
+
+    if (error) return undefined;
+
+    const email = authData.user.email;
+    if (!email) return undefined;
+
+    const { data: emailProfile, error: emailError } = await supabase
+      .from("users")
+      .select("id,name,email,role_id,unit_id,active")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (emailError || !emailProfile) return undefined;
+    return mapUser(emailProfile);
   },
   async login(email: string, password: string): Promise<User | undefined> {
     if (!supabase) return demoRepository.login(email, password);

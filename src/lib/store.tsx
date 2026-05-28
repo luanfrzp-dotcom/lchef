@@ -150,7 +150,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         return mutation.mutateAsync(() => cashRegisterService.open(currentUnitId, amount));
       },
       closeCash(amount) {
-        const openCash = getOpenCashRegister(state);
+        const openCash = getOpenCashRegister(state, currentUnitId);
         return mutation.mutateAsync(() =>
           cashRegisterService.close(currentUnitId, amount, openCash?.id),
         );
@@ -181,7 +181,11 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         const record = state.financialRecords.find((item) => item.id === id);
         if (!record) return Promise.reject(new Error("Lancamento nao encontrado."));
         return mutation.mutateAsync(() =>
-          financialService.markPaid(record, currentUnitId, getOpenCashRegister(state)),
+          financialService.markPaid(
+            record,
+            currentUnitId,
+            getOpenCashRegister(state, currentUnitId),
+          ),
         );
       },
       receivePurchase(id) {
@@ -189,7 +193,11 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       },
       payPurchase(id) {
         return mutation.mutateAsync(() =>
-          financialService.payPurchase(id, currentUnitId, getOpenCashRegister(state)),
+          financialService.payPurchase(
+            id,
+            currentUnitId,
+            getOpenCashRegister(state, currentUnitId),
+          ),
         );
       },
       metrics: dashboardMetrics(state),
@@ -217,6 +225,6 @@ export function useBusiness() {
 }
 
 export function useOpenCashRegister() {
-  const { state } = useBusiness();
-  return getOpenCashRegister(state);
+  const { currentUser, state } = useBusiness();
+  return getOpenCashRegister(state, currentUser?.unitId);
 }

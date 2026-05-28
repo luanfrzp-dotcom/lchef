@@ -145,6 +145,7 @@ export const appDataRepository = {
         name: user.name,
         email: user.email,
         role: user.role_id as RoleId,
+        unitId: user.unit_id ?? undefined,
         active: user.active,
       })),
       currentUserId: undefined,
@@ -247,6 +248,7 @@ export const appDataRepository = {
       })),
       cashRegisters: (cashRegisters ?? []).map((cash) => ({
         id: cash.id,
+        unitId: cash.unit_id ?? undefined,
         openedAt: cash.opened_at,
         openedBy: cash.opened_by ?? "",
         openingAmount: Number(cash.opening_amount),

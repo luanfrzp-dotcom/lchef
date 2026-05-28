@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl } from "@/components/ui-bits";
-import { PAYMENT_LABELS, type PaymentMethod, type Product } from "@/lib/domain";
+import { makeId, PAYMENT_LABELS, type PaymentMethod, type Product } from "@/lib/domain";
 import { useBusiness, useOpenCashRegister } from "@/lib/store";
 import {
   Banknote,
@@ -47,10 +47,13 @@ function PDV() {
   const [customerName, setCustomerName] = useState("");
   const [discount, setDiscount] = useState(0);
   const [serviceFee, setServiceFee] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pix");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [openingAmount, setOpeningAmount] = useState(200);
   const [message, setMessage] = useState("");
   const [lastReceipt, setLastReceipt] = useState<string>("");
+  const [clientRequestId, setClientRequestId] = useState(() => makeId("sale_request"));
+  const [isOpeningCash, setIsOpeningCash] = useState(false);
+  const [isFinishing, setIsFinishing] = useState(false);
 
   const categories = useMemo(
     () => ["Todos", ...Array.from(new Set(state.products.map((product) => product.category)))],
@@ -68,7 +71,25 @@ function PDV() {
     [category, query, state.products],
   );
 
-  const add = (product: Product) =>
+  const productHasNoStock = (product: Product) => product.stock < 900 && product.stock <= 0;
+
+  const add = (product: Product) => {
+    if (!openRegister) {
+      setMessage("Abra o caixa antes de adicionar produtos.");
+      return;
+    }
+
+    if (productHasNoStock(product)) {
+      setMessage(`${product.name} esta sem estoque disponivel.`);
+      return;
+    }
+
+    const currentQuantity = cart.find((item) => item.product.id === product.id)?.quantity ?? 0;
+    if (product.stock < 900 && currentQuantity + 1 > product.stock) {
+      setMessage(`${product.name} nao possui estoque suficiente para mais unidades.`);
+      return;
+    }
+
     setCart((current) => {
       const item = current.find((candidate) => candidate.product.id === product.id);
       return item
@@ -79,6 +100,8 @@ function PDV() {
           )
         : [...current, { product, quantity: 1 }];
     });
+    setMessage("");
+  };
 
   const dec = (id: string) =>
     setCart((current) =>
@@ -96,17 +119,50 @@ function PDV() {
   const total = Math.max(0, subtotal - discount + serviceFee);
 
   async function handleOpenCash() {
+    if (isOpeningCash) return;
+    if (openingAmount < 0) {
+      setMessage("O fundo inicial nao pode ser negativo.");
+      return;
+    }
+
+    setIsOpeningCash(true);
     try {
       await openCash(openingAmount);
       setMessage("Caixa aberto com sucesso.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Nao foi possivel abrir o caixa.");
+    } finally {
+      setIsOpeningCash(false);
     }
   }
 
   async function finishSale() {
+    if (isFinishing) return;
+    if (!openRegister) {
+      setMessage("Abra o caixa antes de finalizar a venda.");
+      return;
+    }
+    if (!cart.length) {
+      setMessage("Adicione ao menos um produto antes de finalizar a venda.");
+      return;
+    }
+    if (!paymentMethod) {
+      setMessage("Selecione a forma de pagamento.");
+      return;
+    }
+    if (discount < 0 || serviceFee < 0 || total < 0) {
+      setMessage("Revise desconto e taxa antes de finalizar a venda.");
+      return;
+    }
+
+    const missingRecipeProducts = cart
+      .filter((item) => !item.product.recipeId)
+      .map((item) => item.product.name);
+
+    setIsFinishing(true);
     try {
       await createSale({
+        clientRequestId,
         customerName,
         channel,
         discount,
@@ -133,11 +189,17 @@ function PDV() {
       setCustomerName("");
       setDiscount(0);
       setServiceFee(0);
+      setPaymentMethod(null);
+      setClientRequestId(makeId("sale_request"));
       setMessage(
-        "Venda finalizada. Pedido, pagamento, receita, caixa e estoque foram atualizados.",
+        missingRecipeProducts.length
+          ? `Venda finalizada. Pedido, pagamento, receita e caixa foram atualizados. Atenção: ${missingRecipeProducts.join(", ")} sem ficha tecnica; estoque de ingredientes nao foi baixado para esses itens.`
+          : "Venda finalizada. Pedido, pagamento, receita, caixa e estoque foram atualizados.",
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Erro ao finalizar venda.");
+    } finally {
+      setIsFinishing(false);
     }
   }
 
@@ -167,8 +229,12 @@ function PDV() {
                   onChange={(event) => setOpeningAmount(Number(event.target.value))}
                 />
               </div>
-              <Button onClick={handleOpenCash} className="bg-[color:var(--primary)]">
-                Abrir caixa
+              <Button
+                onClick={handleOpenCash}
+                disabled={isOpeningCash}
+                className="bg-[color:var(--primary)]"
+              >
+                {isOpeningCash ? "Abrindo..." : "Abrir caixa"}
               </Button>
               <span className="text-sm text-amber-800">
                 Vendas ficam bloqueadas ate a abertura do caixa.
@@ -218,7 +284,7 @@ function PDV() {
               key={product.id}
               onClick={() => add(product)}
               className="text-left"
-              disabled={!openRegister}
+              disabled={!openRegister || productHasNoStock(product)}
             >
               <Card className="h-full transition hover:border-[color:var(--gold)] hover:shadow-md">
                 <CardContent className="p-3">
@@ -232,6 +298,12 @@ function PDV() {
                   </div>
                   {product.stock < product.stockMin && (
                     <Badge className="mt-2 bg-red-100 text-red-700">estoque critico</Badge>
+                  )}
+                  {productHasNoStock(product) && (
+                    <Badge className="mt-2 bg-red-100 text-red-700">sem estoque</Badge>
+                  )}
+                  {!product.recipeId && (
+                    <Badge className="mt-2 bg-amber-100 text-amber-700">sem ficha tecnica</Badge>
                   )}
                 </CardContent>
               </Card>
@@ -372,10 +444,10 @@ function PDV() {
           )}
           <Button
             className="mt-3 w-full bg-[color:var(--primary)] hover:bg-[color:var(--primary)]/90"
-            disabled={!cart.length || !openRegister}
+            disabled={!cart.length || !openRegister || !paymentMethod || isFinishing}
             onClick={finishSale}
           >
-            Finalizar venda - {brl(total)}
+            {isFinishing ? "Finalizando..." : `Finalizar compra - ${brl(total)}`}
           </Button>
           <Button
             className="mt-2 w-full"

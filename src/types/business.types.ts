@@ -81,6 +81,12 @@ export type CompleteSaleResult = {
   financial_entries_count: number;
   payments_count?: number;
   idempotent?: boolean;
+  warnings?: Array<{
+    code: string;
+    product_id?: string;
+    product_name?: string;
+    message: string;
+  }>;
 };
 
 export type OpenCashRegisterPayload = {
