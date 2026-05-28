@@ -1,32 +1,101 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/ui-bits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
-
-const data = Array.from({ length: 30 }, (_, i) => ({
-  dia: i + 1,
-  entradas: 1500 + Math.round(Math.sin(i / 3) * 800 + Math.random() * 600),
-  saidas: 1200 + Math.round(Math.cos(i / 4) * 500 + Math.random() * 400),
-})).map((d, i, arr) => ({ ...d, saldo: arr.slice(0, i + 1).reduce((s, x) => s + x.entradas - x.saidas, 8000) }));
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { PageHeader, brl } from "@/components/ui-bits";
+import { cashFlowProjection } from "@/lib/domain";
+import { useBusiness } from "@/lib/store";
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 export const Route = createFileRoute("/_app/fluxo-caixa")({
-  head: () => ({ meta: [{ title: "Fluxo de Caixa · L'Chef Café" }] }),
-  component: () => (
+  head: () => ({ meta: [{ title: "Fluxo de Caixa - L'Chef Cafe" }] }),
+  component: FluxoCaixa,
+});
+
+function FluxoCaixa() {
+  const { state } = useBusiness();
+  const data = cashFlowProjection(state).map((row) => ({
+    ...row,
+    dia: new Date(row.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+    entradas: row.inflow,
+    saidas: row.outflow,
+    saldo: row.balance,
+  }));
+
+  return (
     <>
-      <PageHeader title="Fluxo de Caixa" subtitle="Entradas, saídas e saldo projetado dos próximos 30 dias" />
-      <Card><CardHeader><CardTitle className="text-base">Projeção · 30 dias</CardTitle></CardHeader>
+      <PageHeader title="Fluxo de Caixa" subtitle="Entradas, saidas e saldo projetado" />
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Projecao</CardTitle>
+        </CardHeader>
         <CardContent className="h-96">
-          <ResponsiveContainer><LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e8e0d2" />
-            <XAxis dataKey="dia" stroke="#8a6a4a" fontSize={12} />
-            <YAxis stroke="#8a6a4a" fontSize={12} />
-            <Tooltip /><Legend />
-            <Line type="monotone" dataKey="entradas" stroke="#16a34a" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="saidas" stroke="#dc2626" strokeWidth={2} dot={false} />
-            <Line type="monotone" dataKey="saldo" stroke="#c9a24c" strokeWidth={3} dot={false} />
-          </LineChart></ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e0d2" />
+              <XAxis dataKey="dia" stroke="#8a6a4a" fontSize={12} />
+              <YAxis stroke="#8a6a4a" fontSize={12} />
+              <Tooltip />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="entradas"
+                stroke="#16a34a"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line type="monotone" dataKey="saidas" stroke="#dc2626" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="saldo" stroke="#c9a24c" strokeWidth={3} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardContent className="p-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Descricao</TableHead>
+                <TableHead className="text-right">Entrada</TableHead>
+                <TableHead className="text-right">Saida</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {data.map((row, index) => (
+                <TableRow key={`${row.date}-${index}`}>
+                  <TableCell>{new Date(row.date).toLocaleDateString("pt-BR")}</TableCell>
+                  <TableCell>{row.description}</TableCell>
+                  <TableCell className="text-right text-emerald-600">
+                    {row.inflow ? brl(row.inflow) : "-"}
+                  </TableCell>
+                  <TableCell className="text-right text-red-600">
+                    {row.outflow ? brl(row.outflow) : "-"}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold">{brl(row.balance)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </>
-  ),
-});
+  );
+}

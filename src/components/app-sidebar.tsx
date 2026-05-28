@@ -1,30 +1,58 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, ShoppingCart, ClipboardList, ChefHat, Package, BookOpen,
-  Boxes, Truck, Users2, Wallet, ArrowDownCircle, ArrowUpCircle, LineChart,
-  FileBarChart, UserCircle2, Sparkles, Plug, Settings, Shield, ScrollText,
-  Building2, FileSpreadsheet, Coffee,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  BookOpen,
+  Boxes,
+  Building2,
+  ChefHat,
+  ClipboardList,
+  Coffee,
+  FileBarChart,
+  FileSpreadsheet,
+  LayoutDashboard,
+  LineChart,
+  Package,
+  Plug,
+  ScrollText,
+  Settings,
+  Shield,
+  ShoppingCart,
+  Sparkles,
+  Truck,
+  UserCircle2,
+  Users2,
+  Wallet,
 } from "lucide-react";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useBusiness } from "@/lib/store";
 
-const groups: { label: string; items: { to: string; label: string; icon: any }[] }[] = [
+const groups = [
   {
-    label: "Operação",
+    label: "Operacao",
     items: [
       { to: "/", label: "Dashboard", icon: LayoutDashboard },
       { to: "/pdv", label: "PDV", icon: ShoppingCart },
       { to: "/pedidos", label: "Pedidos", icon: ClipboardList },
-      { to: "/cozinha", label: "Cozinha / Produção", icon: ChefHat },
+      { to: "/cozinha", label: "Cozinha / Producao", icon: ChefHat },
     ],
   },
   {
-    label: "Catálogo & Estoque",
+    label: "Catalogo & Estoque",
     items: [
       { to: "/produtos", label: "Produtos", icon: Package },
-      { to: "/fichas-tecnicas", label: "Fichas Técnicas", icon: BookOpen },
+      { to: "/fichas-tecnicas", label: "Fichas Tecnicas", icon: BookOpen },
       { to: "/estoque", label: "Estoque", icon: Boxes },
       { to: "/compras", label: "Compras", icon: Truck },
       { to: "/fornecedores", label: "Fornecedores", icon: Building2 },
@@ -44,25 +72,27 @@ const groups: { label: string; items: { to: string; label: string; icon: any }[]
     label: "Pessoas",
     items: [
       { to: "/clientes", label: "Clientes", icon: Users2 },
-      { to: "/funcionarios", label: "Funcionários", icon: UserCircle2 },
+      { to: "/funcionarios", label: "Funcionarios", icon: UserCircle2 },
     ],
   },
   {
-    label: "Gestão",
+    label: "Gestao",
     items: [
-      { to: "/relatorios", label: "Relatórios", icon: FileBarChart },
+      { to: "/relatorios", label: "Relatorios", icon: FileBarChart },
       { to: "/contador", label: "Painel do Contador", icon: FileSpreadsheet },
-      { to: "/analise", label: "Análise Inteligente", icon: Sparkles },
-      { to: "/integracoes", label: "Integrações", icon: Plug },
-      { to: "/configuracoes", label: "Configurações", icon: Settings },
-      { to: "/usuarios", label: "Usuários & Permissões", icon: Shield },
+      { to: "/analise", label: "Analise Inteligente", icon: Sparkles },
+      { to: "/integracoes", label: "Integracoes", icon: Plug },
+      { to: "/configuracoes", label: "Configuracoes", icon: Settings },
+      { to: "/usuarios", label: "Usuarios & Permissoes", icon: Shield },
       { to: "/auditoria", label: "Auditoria / Logs", icon: ScrollText },
     ],
   },
 ];
 
 export function AppSidebar() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { canAccess } = useBusiness();
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -71,39 +101,45 @@ export function AppSidebar() {
             <Coffee className="h-5 w-5" />
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">L'Chef Café</div>
-            <div className="text-[11px] text-sidebar-foreground/70">ERP · PDV · Gestão</div>
+            <div className="text-sm font-semibold tracking-wide text-sidebar-foreground">
+              L'Chef Cafe
+            </div>
+            <div className="text-[11px] text-sidebar-foreground/70">ERP - PDV - Gestao</div>
           </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {groups.map((g) => (
-          <SidebarGroup key={g.label}>
-            <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {g.items.map((it) => {
-                  const Icon = it.icon;
-                  const active = pathname === it.to;
-                  return (
-                    <SidebarMenuItem key={it.to}>
-                      <SidebarMenuButton asChild isActive={active}>
-                        <Link to={it.to}>
-                          <Icon className="h-4 w-4" />
-                          <span>{it.label}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        {groups.map((group) => {
+          const items = group.items.filter((item) => canAccess(item.to));
+          if (!items.length) return null;
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {items.map((item) => {
+                    const Icon = item.icon;
+                    const active = pathname === item.to;
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton asChild isActive={active}>
+                          <Link to={item.to}>
+                            <Icon className="h-4 w-4" />
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          );
+        })}
       </SidebarContent>
       <SidebarFooter>
         <div className="px-3 py-2 text-[11px] text-sidebar-foreground/60">
-          Unidade: <span className="text-sidebar-foreground">L'Chef Café</span>
+          Unidade: <span className="text-sidebar-foreground">L'Chef Cafe</span>
         </div>
       </SidebarFooter>
     </Sidebar>
