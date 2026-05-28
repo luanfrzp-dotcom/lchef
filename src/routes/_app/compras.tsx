@@ -1,43 +1,91 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, brl } from "@/components/ui-bits";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FORNECEDORES } from "@/lib/mock-data";
+import { useBusiness } from "@/lib/store";
+
+const statusLabel = {
+  order: "pedido",
+  received: "recebido",
+  paid: "pago",
+  canceled: "cancelado",
+};
 
 export const Route = createFileRoute("/_app/compras")({
-  head: () => ({ meta: [{ title: "Compras · L'Chef Café" }] }),
-  component: () => (
-    <>
-      <PageHeader title="Compras" subtitle="Pedidos de compra, recebimento e atualização automática de estoque"
-        actions={<Button className="bg-[color:var(--primary)]">+ Nova Compra</Button>} />
-      <Card><CardContent className="p-4">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>NF</TableHead><TableHead>Fornecedor</TableHead><TableHead>Data</TableHead>
-            <TableHead className="text-right">Valor</TableHead><TableHead>Pagamento</TableHead><TableHead>Status</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {[
-              { nf: "00123", f: "Fazenda Aurora", d: "27/05/2026", v: 1280, p: "Boleto 30d", s: "recebido" },
-              { nf: "00876", f: "Laticínios Bela Vista", d: "26/05/2026", v: 740, p: "PIX", s: "pago" },
-              { nf: "01234", f: "Cacau Amazônico Ltda", d: "24/05/2026", v: 2150, p: "Boleto 21d", s: "pedido" },
-              { nf: "00422", f: "Embalagens Premium", d: "22/05/2026", v: 640, p: "Cartão", s: "pago" },
-            ].map(r => (
-              <TableRow key={r.nf}>
-                <TableCell className="font-mono text-xs">{r.nf}</TableCell>
-                <TableCell className="font-medium">{r.f}</TableCell>
-                <TableCell>{r.d}</TableCell>
-                <TableCell className="text-right font-semibold">{brl(r.v)}</TableCell>
-                <TableCell>{r.p}</TableCell>
-                <TableCell><Badge variant="secondary">{r.s}</Badge></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent></Card>
-      <p className="mt-3 text-xs text-muted-foreground">Fornecedores ativos: {FORNECEDORES.length}</p>
-    </>
-  ),
+  head: () => ({ meta: [{ title: "Compras - L'Chef Cafe" }] }),
+  component: ComprasPage,
 });
+
+function ComprasPage() {
+  const { state, receivePurchase, payPurchase } = useBusiness();
+
+  return (
+    <>
+      <PageHeader
+        title="Compras"
+        subtitle="Pedidos de compra, recebimento e atualizacao automatica de estoque"
+        actions={<Button className="bg-[color:var(--primary)]">Nova compra</Button>}
+      />
+      <Card>
+        <CardContent className="p-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>NF</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+                <TableHead>Pagamento</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {state.purchases.map((purchase) => (
+                <TableRow key={purchase.id}>
+                  <TableCell className="font-mono text-xs">{purchase.invoiceNumber}</TableCell>
+                  <TableCell className="font-medium">{purchase.supplierName}</TableCell>
+                  <TableCell>{new Date(purchase.createdAt).toLocaleDateString("pt-BR")}</TableCell>
+                  <TableCell className="text-right font-semibold">{brl(purchase.total)}</TableCell>
+                  <TableCell>{purchase.paymentTerms}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{statusLabel[purchase.status]}</Badge>
+                  </TableCell>
+                  <TableCell className="space-x-2 text-right">
+                    {purchase.status === "order" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => receivePurchase(purchase.id)}
+                      >
+                        Receber
+                      </Button>
+                    )}
+                    {purchase.paymentStatus === "open" && (
+                      <Button
+                        size="sm"
+                        className="bg-[color:var(--primary)]"
+                        onClick={() => payPurchase(purchase.id)}
+                      >
+                        Pagar
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </>
+  );
+}

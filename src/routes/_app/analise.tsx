@@ -2,31 +2,94 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/ui-bits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, TrendingDown, TrendingUp, Package, AlertTriangle } from "lucide-react";
-
-const INSIGHTS = [
-  { i: TrendingDown, c: "text-amber-600", t: "Margem baixa", d: "Torta de Chocolate com margem 60,8% — reavaliar precificação ou substituir fornecedor de chocolate." },
-  { i: TrendingUp, c: "text-emerald-600", t: "Alto giro", d: "Cookie de Chocolate vendeu 32% acima da média. Sugerir produção +30% e combo com café." },
-  { i: AlertTriangle, c: "text-red-600", t: "Ruptura prevista", d: "Cacau em pó deve acabar em ~3 dias no ritmo atual. Sugerir compra de 5kg." },
-  { i: Package, c: "text-[color:var(--gold)]", t: "Oportunidade de combo", d: "78% dos clientes de Espresso compram um doce — criar combo dedicado." },
-  { i: Sparkles, c: "text-[color:var(--gold)]", t: "Resumo do dia", d: "Faturamento 8,2% acima de ontem. iFood subindo, WhatsApp estável, loja física firme." },
-  { i: TrendingDown, c: "text-amber-600", t: "Despesa acima da média", d: "Embalagens 18% acima do trimestre anterior — revisar fornecedor." },
-];
+import { calculateDre, dashboardMetrics } from "@/lib/domain";
+import { useBusiness } from "@/lib/store";
 
 export const Route = createFileRoute("/_app/analise")({
-  head: () => ({ meta: [{ title: "Análise Inteligente · L'Chef Café" }] }),
-  component: () => (
+  head: () => ({ meta: [{ title: "Analise Inteligente - L'Chef Cafe" }] }),
+  component: AnalisePage,
+});
+
+function AnalisePage() {
+  const { state } = useBusiness();
+  const metrics = dashboardMetrics(state);
+  const dre = calculateDre(state);
+  const topProduct = state.orders
+    .flatMap((order) => order.items)
+    .reduce<
+      Record<string, number>
+    >((acc, item) => ({ ...acc, [item.name]: (acc[item.name] ?? 0) + item.quantity }), {});
+  const bestSeller =
+    Object.entries(topProduct).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "Sem vendas no periodo";
+  const lowMargin = state.products
+    .map((product) => ({
+      product,
+      margin: product.price > 0 ? ((product.price - product.cost) / product.price) * 100 : 0,
+    }))
+    .sort((a, b) => a.margin - b.margin)[0];
+  const critical = metrics.criticalStock[0];
+
+  const insights = [
+    {
+      icon: TrendingDown,
+      color: "text-amber-600",
+      title: "Margem baixa",
+      detail: lowMargin
+        ? `${lowMargin.product.name} esta com margem estimada de ${lowMargin.margin.toFixed(1)}%.`
+        : "Sem produtos cadastrados.",
+    },
+    {
+      icon: TrendingUp,
+      color: "text-emerald-600",
+      title: "Alto giro",
+      detail:
+        bestSeller === "Sem vendas no periodo"
+          ? "Venda pelo PDV para gerar ranking real."
+          : `${bestSeller} lidera as vendas registradas.`,
+    },
+    {
+      icon: AlertTriangle,
+      color: "text-red-600",
+      title: "Estoque critico",
+      detail: critical
+        ? `${critical.name} esta abaixo do minimo (${critical.quantity}${critical.unit}).`
+        : "Nenhum insumo abaixo do minimo.",
+    },
+    {
+      icon: Package,
+      color: "text-[color:var(--gold)]",
+      title: "CMV",
+      detail: `CMV gerencial em ${dre.netRevenue > 0 ? ((dre.cmv / dre.netRevenue) * 100).toFixed(1) : "0.0"}% sobre a receita liquida.`,
+    },
+    {
+      icon: Sparkles,
+      color: "text-[color:var(--gold)]",
+      title: "Resumo do dia",
+      detail: `Hoje foram registrados ${metrics.orderCount} pedidos no mes e ${metrics.criticalStock.length} alertas de estoque.`,
+    },
+  ];
+
+  return (
     <>
-      <PageHeader title="Análise Inteligente" subtitle="Insights preparados para integração futura com IA (OpenAI)" />
+      <PageHeader
+        title="Analise Inteligente"
+        subtitle="Insights calculados a partir dos dados operacionais atuais"
+      />
       <div className="grid gap-4 md:grid-cols-2">
-        {INSIGHTS.map((x, i) => {
-          const Ico = x.i;
+        {insights.map((insight) => {
+          const Icon = insight.icon;
           return (
-            <Card key={i}><CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Ico className={`h-4 w-4 ${x.c}`} /> {x.t}</CardTitle></CardHeader>
-              <CardContent className="text-sm text-muted-foreground">{x.d}</CardContent>
+            <Card key={insight.title}>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Icon className={`h-4 w-4 ${insight.color}`} /> {insight.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">{insight.detail}</CardContent>
             </Card>
           );
         })}
       </div>
     </>
-  ),
-});
+  );
+}

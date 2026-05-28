@@ -1,80 +1,133 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader, brl } from "@/components/ui-bits";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader, brl } from "@/components/ui-bits";
+import { calculateRecipeMetrics } from "@/lib/domain";
+import { useBusiness } from "@/lib/store";
 
 export const Route = createFileRoute("/_app/fichas-tecnicas")({
-  head: () => ({ meta: [{ title: "Fichas Técnicas · L'Chef Café" }] }),
+  head: () => ({ meta: [{ title: "Fichas Tecnicas - L'Chef Cafe" }] }),
   component: Fichas,
 });
 
-const FICHA = {
-  produto: "Brownie Bean-to-Bar",
-  rendimento: "20 unidades",
-  custoTotal: 102.0,
-  custoUn: 5.1,
-  preco: 18.0,
-  margem: 71.7,
-  cmv: 28.3,
-  preparo: "45 min",
-  validade: "5 dias refrigerado",
-  versao: "v2.3",
-  ingredientes: [
-    { nome: "Chocolate 70%", qtd: 0.4, un: "kg", custo: 72 },
-    { nome: "Manteiga", qtd: 0.25, un: "kg", custo: 12.5 },
-    { nome: "Açúcar", qtd: 0.3, un: "kg", custo: 1.44 },
-    { nome: "Farinha de Trigo", qtd: 0.18, un: "kg", custo: 1.12 },
-    { nome: "Ovos", qtd: 4, un: "un", custo: 4.0 },
-    { nome: "Embalagem individual", qtd: 20, un: "un", custo: 10.94 },
-  ],
-};
-
 function Fichas() {
+  const { state } = useBusiness();
+  const recipe = state.recipes[0];
+  const product = recipe ? state.products.find((item) => item.id === recipe.productId) : undefined;
+  const metrics =
+    recipe && product ? calculateRecipeMetrics(recipe, product, state.inventoryItems) : undefined;
+
   return (
     <>
-      <PageHeader title="Fichas Técnicas" subtitle="Receitas, custos, rendimento e CMV calculados automaticamente"
-        actions={<Button className="bg-[color:var(--primary)]">+ Nova Ficha</Button>} />
+      <PageHeader
+        title="Fichas Tecnicas"
+        subtitle="Receitas, custos, rendimento e CMV calculados automaticamente"
+        actions={<Button className="bg-[color:var(--primary)]">+ Nova Ficha</Button>}
+      />
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between text-base">
-              <span>{FICHA.produto}</span>
-              <Badge variant="outline">{FICHA.versao}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <table className="w-full text-sm">
-              <thead className="border-b text-left text-muted-foreground">
-                <tr><th className="py-2">Ingrediente</th><th>Qtd</th><th>Un</th><th className="text-right">Custo</th></tr>
-              </thead>
-              <tbody className="divide-y">
-                {FICHA.ingredientes.map((i, k) => (
-                  <tr key={k}>
-                    <td className="py-2">{i.nome}</td>
-                    <td>{i.qtd}</td>
-                    <td>{i.un}</td>
-                    <td className="text-right">{brl(i.custo)}</td>
-                  </tr>
-                ))}
-                <tr className="font-semibold">
-                  <td className="pt-3" colSpan={3}>Custo total da receita</td>
-                  <td className="pt-3 text-right text-[color:var(--primary)]">{brl(FICHA.custoTotal)}</td>
-                </tr>
-              </tbody>
-            </table>
+      {!recipe || !product || !metrics ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            Nenhuma ficha tecnica cadastrada.
           </CardContent>
         </Card>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base">
+                <span>{recipe.name}</span>
+                <Badge variant="outline">{recipe.version}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <table className="w-full text-sm">
+                <thead className="border-b text-left text-muted-foreground">
+                  <tr>
+                    <th className="py-2">Ingrediente</th>
+                    <th>Qtd</th>
+                    <th>Un</th>
+                    <th className="text-right">Custo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {recipe.items.map((item) => {
+                    const inventory = state.inventoryItems.find(
+                      (inv) => inv.id === item.inventoryItemId,
+                    );
+                    const cost = (inventory?.cost ?? 0) * item.quantity;
+                    return (
+                      <tr key={item.inventoryItemId}>
+                        <td className="py-2">{inventory?.name ?? item.inventoryItemId}</td>
+                        <td>{item.quantity}</td>
+                        <td>{item.unit}</td>
+                        <td className="text-right">{brl(cost)}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="font-semibold">
+                    <td className="pt-3" colSpan={3}>
+                      Custo total da receita
+                    </td>
+                    <td className="pt-3 text-right text-[color:var(--primary)]">
+                      {brl(metrics.costTotal)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
 
-        <div className="space-y-3">
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Rendimento</div><div className="text-xl font-semibold">{FICHA.rendimento}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Custo / un</div><div className="text-xl font-semibold">{brl(FICHA.custoUn)}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Preço venda</div><div className="text-xl font-semibold text-[color:var(--primary)]">{brl(FICHA.preco)}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs uppercase text-muted-foreground">Margem · CMV</div><div className="text-xl font-semibold text-emerald-600">{FICHA.margem}% · {FICHA.cmv}%</div></CardContent></Card>
-          <Card><CardContent className="p-4 text-sm space-y-1"><div><span className="text-muted-foreground">Tempo de preparo:</span> {FICHA.preparo}</div><div><span className="text-muted-foreground">Validade:</span> {FICHA.validade}</div></CardContent></Card>
+          <div className="space-y-3">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs uppercase text-muted-foreground">Rendimento</div>
+                <div className="text-xl font-semibold">{recipe.yieldQty} unidades</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs uppercase text-muted-foreground">Custo / un</div>
+                <div className="text-xl font-semibold">{brl(metrics.costPerUnit)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs uppercase text-muted-foreground">Preco venda</div>
+                <div className="text-xl font-semibold text-[color:var(--primary)]">
+                  {brl(product.price)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs uppercase text-muted-foreground">Margem / CMV</div>
+                <div className="text-xl font-semibold text-emerald-600">
+                  {metrics.grossMargin.toFixed(1)}% / {metrics.cmv.toFixed(1)}%
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-xs uppercase text-muted-foreground">Preco sugerido</div>
+                <div className="text-xl font-semibold">{brl(metrics.suggestedPrice)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="space-y-1 p-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Preparo:</span> {recipe.preparation}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Validade:</span> {recipe.validityDays}{" "}
+                  dias
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
