@@ -117,6 +117,7 @@ export type CashMovement = {
 
 export type CashRegister = {
   id: string;
+  unitId?: string;
   openedAt: string;
   openedBy: string;
   openingAmount: number;
@@ -231,6 +232,7 @@ export type AppState = {
 };
 
 export type SaleInput = {
+  clientRequestId?: string;
   customerName?: string;
   channel: string;
   items: Array<{ productId: string; quantity: number }>;
@@ -382,8 +384,10 @@ export function calculateRecipeMetrics(
   return { costTotal, costPerUnit, cmv, grossMargin, suggestedPrice };
 }
 
-export function getOpenCashRegister(state: AppState) {
-  return state.cashRegisters.find((cash) => cash.status === "open");
+export function getOpenCashRegister(state: AppState, unitId?: string) {
+  return state.cashRegisters.find(
+    (cash) => cash.status === "open" && (!unitId || !cash.unitId || cash.unitId === unitId),
+  );
 }
 
 export function openCashRegister(state: AppState, userId: string, openingAmount: number) {

@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-const rpcMigration = readFileSync(
-  "supabase/migrations/20260528100000_lchef_transactional_rpcs.sql",
-  "utf8",
-);
+const migrationFiles = readdirSync("supabase/migrations")
+  .filter((file) => file.endsWith(".sql"))
+  .sort();
+const rpcMigration = migrationFiles
+  .map((file) => readFileSync(`supabase/migrations/${file}`, "utf8"))
+  .join("\n");
+const latestMigration = readFileSync(`supabase/migrations/${migrationFiles.at(-1)}`, "utf8");
 const salesServiceSource = readFileSync("src/services/sales.service.ts", "utf8");
+const pdvSource = readFileSync("src/routes/_app/pdv.tsx", "utf8");
 
 test("migration cria RPCs transacionais obrigatorias", () => {
   [
@@ -60,6 +64,7 @@ test("policies RLS usam auth.uid, perfil e unidade", () => {
   [
     "enable row level security",
     "auth.uid()",
+    "current_app_user_id",
     "public.same_unit",
     "public.has_permission",
     "public.is_admin",
@@ -69,7 +74,25 @@ test("policies RLS usam auth.uid, perfil e unidade", () => {
 });
 
 test("service de venda gera payload idempotente e delega para repository", () => {
-  assert.match(salesServiceSource, /client_request_id: makeId\("sale_request"\)/);
+  assert.match(
+    salesServiceSource,
+    /client_request_id: input\.clientRequestId \?\? makeId\("sale_request"\)/,
+  );
   assert.match(salesServiceSource, /salesRepository\.completeSale\(payload\)/);
   assert.match(salesServiceSource, /Pagamentos nao fecham com o total da venda/);
+  assert.match(salesServiceSource, /Selecione a forma de pagamento/);
+});
+
+test("PDV bloqueia duplo clique e exige pagamento selecionado", () => {
+  assert.match(pdvSource, /isFinishing/);
+  assert.match(pdvSource, /setClientRequestId\(makeId\("sale_request"\)\)/);
+  assert.match(pdvSource, /Selecione a forma de pagamento/);
+  assert.match(pdvSource, /Finalizar compra/);
+});
+
+test("RPC permite venda sem ficha tecnica com aviso e sem quebrar financeiro", () => {
+  assert.match(rpcMigration, /v_warnings/);
+  assert.match(rpcMigration, /sem ficha tecnica ativa; estoque de ingredientes nao foi baixado/i);
+  assert.doesNotMatch(latestMigration, /raise exception 'Ficha tecnica ativa ausente/);
+  assert.match(rpcMigration, /NO_PAYMENT_METHOD/);
 });
