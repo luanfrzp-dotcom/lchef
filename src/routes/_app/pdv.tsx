@@ -1,12 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { CashClosingPanel } from "@/components/cash-closing-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl } from "@/components/ui-bits";
-import { makeId, PAYMENT_LABELS, type PaymentMethod, type Product } from "@/lib/domain";
+import {
+  expectedCashAmount,
+  makeId,
+  PAYMENT_LABELS,
+  type PaymentMethod,
+  type Product,
+} from "@/lib/domain";
 import { useBusiness, useOpenCashRegister } from "@/lib/store";
 import {
   Banknote,
@@ -38,7 +45,7 @@ const paymentMethods: PaymentMethod[] = [
 ];
 
 function PDV() {
-  const { state, openCash, createSale } = useBusiness();
+  const { state, openCash, closeCash, createSale } = useBusiness();
   const openRegister = useOpenCashRegister();
   const [category, setCategory] = useState("Todos");
   const [query, setQuery] = useState("");
@@ -54,6 +61,7 @@ function PDV() {
   const [clientRequestId, setClientRequestId] = useState(() => makeId("sale_request"));
   const [isOpeningCash, setIsOpeningCash] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
+  const [showClosing, setShowClosing] = useState(false);
 
   const categories = useMemo(
     () => ["Todos", ...Array.from(new Set(state.products.map((product) => product.category)))],
@@ -128,6 +136,7 @@ function PDV() {
     setIsOpeningCash(true);
     try {
       await openCash(openingAmount);
+      setShowClosing(false);
       setMessage("Caixa aberto com sucesso.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Nao foi possivel abrir o caixa.");
@@ -239,6 +248,49 @@ function PDV() {
               <span className="text-sm text-amber-800">
                 Vendas ficam bloqueadas ate a abertura do caixa.
               </span>
+            </CardContent>
+          </Card>
+        )}
+
+        {openRegister && (
+          <Card className="mb-4">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div>
+                  <div className="text-sm font-semibold">Caixa aberto</div>
+                  <div className="text-xs text-muted-foreground">
+                    Dinheiro esperado: {brl(expectedCashAmount(openRegister))}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-auto"
+                  disabled={isFinishing}
+                  onClick={() => setShowClosing((current) => !current)}
+                >
+                  {showClosing ? "Ocultar fechamento" : "Fechar caixa"}
+                </Button>
+              </div>
+              {showClosing && (
+                <div className="mt-4 border-t pt-4">
+                  <CashClosingPanel
+                    cash={openRegister}
+                    compact
+                    disabled={isFinishing}
+                    blockedReason={
+                      cart.length
+                        ? "Finalize ou limpe a comanda antes de fechar o caixa."
+                        : undefined
+                    }
+                    onCloseCash={async (amount, note) => {
+                      await closeCash(amount, note);
+                      setShowClosing(false);
+                      setMessage("Caixa fechado com sucesso.");
+                    }}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

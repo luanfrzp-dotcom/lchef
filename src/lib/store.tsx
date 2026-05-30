@@ -38,7 +38,7 @@ type BusinessContextValue = {
   canAccess: (pathname: string) => boolean;
   has: (permission: Permission) => boolean;
   openCash: (amount: number) => Promise<void>;
-  closeCash: (amount: number) => Promise<void>;
+  closeCash: (amount: number, note?: string) => Promise<void>;
   supplyCash: (amount: number, note: string) => Promise<void>;
   withdrawCash: (amount: number, note: string) => Promise<void>;
   createSale: (input: Omit<SaleInput, "userId">) => Promise<void>;
@@ -149,10 +149,10 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       openCash(amount) {
         return mutation.mutateAsync(() => cashRegisterService.open(currentUnitId, amount));
       },
-      closeCash(amount) {
+      closeCash(amount, note) {
         const openCash = getOpenCashRegister(state, currentUnitId);
         return mutation.mutateAsync(() =>
-          cashRegisterService.close(currentUnitId, amount, openCash?.id),
+          cashRegisterService.close(currentUnitId, amount, openCash?.id, note),
         );
       },
       supplyCash(amount, note) {

@@ -155,6 +155,7 @@ export type DbCashRegister = {
   informed_amount: number | null;
   expected_amount: number | null;
   difference: number | null;
+  closing_summary: Json;
 };
 
 export type DbCashMovement = {
@@ -165,6 +166,7 @@ export type DbCashMovement = {
   method: string | null;
   amount: number;
   note: string | null;
+  metadata: Json;
   created_at: string;
 };
 

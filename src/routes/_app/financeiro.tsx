@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { CashClosingPanel } from "@/components/cash-closing-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,18 +21,16 @@ function Financeiro() {
   const balance = cash ? expectedCashAmount(cash) : 0;
   const [movementAmount, setMovementAmount] = useState(0);
   const [movementNote, setMovementNote] = useState("");
-  const [closingAmount, setClosingAmount] = useState(0);
   const [message, setMessage] = useState("");
-  const [busyAction, setBusyAction] = useState<"supply" | "withdrawal" | "close" | null>(null);
+  const [busyAction, setBusyAction] = useState<"supply" | "withdrawal" | null>(null);
 
-  async function runCashAction(action: "supply" | "withdrawal" | "close") {
+  async function runCashAction(action: "supply" | "withdrawal") {
     if (!cash) {
       setMessage("Nao ha caixa aberto para esta operacao.");
       return;
     }
 
-    const amount = action === "close" ? closingAmount : movementAmount;
-    if (amount < 0 || (action !== "close" && amount <= 0)) {
+    if (movementAmount <= 0) {
       setMessage("Informe um valor valido.");
       return;
     }
@@ -40,18 +39,14 @@ function Financeiro() {
     setMessage("");
     try {
       if (action === "supply") {
-        await supplyCash(amount, movementNote || "Suprimento de caixa");
+        await supplyCash(movementAmount, movementNote || "Suprimento de caixa");
         setMessage("Suprimento registrado com sucesso.");
-      } else if (action === "withdrawal") {
-        await withdrawCash(amount, movementNote || "Sangria de caixa");
-        setMessage("Sangria registrada com sucesso.");
       } else {
-        await closeCash(amount);
-        setMessage("Caixa fechado com sucesso.");
+        await withdrawCash(movementAmount, movementNote || "Sangria de caixa");
+        setMessage("Sangria registrada com sucesso.");
       }
       setMovementAmount(0);
       setMovementNote("");
-      setClosingAmount(0);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Operacao de caixa nao concluida.");
     } finally {
@@ -128,23 +123,11 @@ function Financeiro() {
                 Valor esperado em dinheiro: {cash ? brl(balance) : "sem caixa aberto"}.
               </p>
             </div>
-            <div>
-              <Label>Valor informado</Label>
-              <Input
-                type="number"
-                min={0}
-                value={closingAmount}
-                onChange={(event) => setClosingAmount(Number(event.target.value))}
-                disabled={!cash || Boolean(busyAction)}
-              />
-            </div>
-            <Button
-              className="bg-[color:var(--primary)]"
-              disabled={!cash || Boolean(busyAction)}
-              onClick={() => runCashAction("close")}
-            >
-              {busyAction === "close" ? "Fechando..." : "Fechar caixa"}
-            </Button>
+            <CashClosingPanel
+              cash={cash}
+              disabled={Boolean(busyAction)}
+              onCloseCash={(amount, note) => closeCash(amount, note)}
+            />
           </div>
           {message && (
             <div className="rounded-md bg-muted p-2 text-xs text-muted-foreground lg:col-span-2">

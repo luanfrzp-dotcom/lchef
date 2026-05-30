@@ -11,6 +11,7 @@ const rpcMigration = migrationFiles
 const latestMigration = readFileSync(`supabase/migrations/${migrationFiles.at(-1)}`, "utf8");
 const salesServiceSource = readFileSync("src/services/sales.service.ts", "utf8");
 const pdvSource = readFileSync("src/routes/_app/pdv.tsx", "utf8");
+const cashClosingPanelSource = readFileSync("src/components/cash-closing-panel.tsx", "utf8");
 
 test("migration cria RPCs transacionais obrigatorias", () => {
   [
@@ -95,4 +96,29 @@ test("RPC permite venda sem ficha tecnica com aviso e sem quebrar financeiro", (
   assert.match(rpcMigration, /sem ficha tecnica ativa; estoque de ingredientes nao foi baixado/i);
   assert.doesNotMatch(latestMigration, /raise exception 'Ficha tecnica ativa ausente/);
   assert.match(rpcMigration, /NO_PAYMENT_METHOD/);
+});
+
+test("fechamento de caixa calcula dinheiro fisico separado de meios digitais", () => {
+  [
+    "INVALID_CLOSING_AMOUNT",
+    "cash_expenses",
+    "non_cash_expenses",
+    "cash_receivables",
+    "non_cash_receivables",
+    "total_non_cash_sales",
+    "expected_cash",
+    "closing_note",
+  ].forEach((fragment) => assert.match(latestMigration, new RegExp(fragment)));
+
+  assert.match(latestMigration, /type = 'sale' and coalesce\(method, 'cash'\) = 'cash'/);
+  assert.match(latestMigration, /type = 'sale' and coalesce\(method, 'cash'\) <> 'cash'/);
+});
+
+test("UI de fechamento exige valor contado e conferencia explicita", () => {
+  assert.match(pdvSource, /CashClosingPanel/);
+  assert.match(pdvSource, /Finalize ou limpe a comanda antes de fechar o caixa/);
+  assert.match(cashClosingPanelSource, /Conferi os valores do caixa/);
+  assert.match(cashClosingPanelSource, /Usar valor esperado/);
+  assert.match(cashClosingPanelSource, /Diferenca/);
+  assert.match(cashClosingPanelSource, /!canClose/);
 });
