@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { INITIAL_STATE } from "../src/lib/initial-data.ts";
 import {
+  addCashMovement,
   calculateDre,
   calculateRecipeMetrics,
   canAccessRoute,
+  cashClosingSummary,
   closeCashRegister,
   expectedCashAmount,
   finalizeSale,
@@ -46,6 +48,44 @@ test("abre e fecha caixa calculando valor esperado e diferenca", () => {
   assert.equal(closedCash.status, "closed");
   assert.equal(closedCash.expectedAmount, 100);
   assert.equal(closedCash.difference, 10);
+});
+
+test("fechamento de caixa separa dinheiro fisico dos meios digitais", () => {
+  let state = openCashRegister(freshState(), "usr-cashier", 100);
+  const product = state.products.find((item) => item.id === "prod-espresso")!;
+
+  state = finalizeSale(state, {
+    userId: "usr-cashier",
+    channel: "balcao",
+    items: [{ productId: product.id, quantity: 1 }],
+    payments: [{ method: "cash", amount: product.price }],
+  });
+  state = finalizeSale(state, {
+    userId: "usr-cashier",
+    channel: "balcao",
+    items: [{ productId: product.id, quantity: 1 }],
+    payments: [{ method: "pix", amount: product.price }],
+  });
+  state = addCashMovement(state, "usr-cashier", "supply", 20, "Troco extra");
+  state = addCashMovement(state, "usr-cashier", "withdrawal", 5, "Sangria parcial");
+
+  const openCash = getOpenCashRegister(state)!;
+  const summary = cashClosingSummary(openCash);
+  const expectedCash = 100 + product.price + 20 - 5;
+
+  assert.equal(summary.cashSales, product.price);
+  assert.equal(summary.pixSales, product.price);
+  assert.equal(summary.totalSales, product.price * 2);
+  assert.equal(summary.expectedCash, expectedCash);
+  assert.equal(expectedCashAmount(openCash), expectedCash);
+
+  state = closeCashRegister(state, "usr-cashier", expectedCash + 2, "Conferido no turno");
+  const closedCash = state.cashRegisters[0];
+
+  assert.equal(closedCash.expectedAmount, expectedCash);
+  assert.equal(closedCash.difference, 2);
+  assert.equal(closedCash.closingSummary?.pixSales, product.price);
+  assert.equal(closedCash.movements.at(-1)?.note, "Conferido no turno");
 });
 
 test("cria venda, registra pagamento, receita, caixa e baixa estoque por receita", () => {

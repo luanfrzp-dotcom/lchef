@@ -1,5 +1,6 @@
 import type {
   AppState,
+  CashClosingSummary,
   CashRegister,
   DreSummary,
   FinancialRecord,
@@ -17,6 +18,7 @@ import type {
 
 export type {
   AppState,
+  CashClosingSummary,
   CashRegister,
   DreSummary,
   FinancialRecord,
@@ -98,6 +100,7 @@ export type CloseCashRegisterPayload = {
   unit_id: string;
   cash_register_id?: string;
   informed_amount: number;
+  closing_note?: string;
 };
 
 export type CashMovementPayload = {

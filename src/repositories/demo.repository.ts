@@ -74,8 +74,8 @@ export const demoRepository = {
   async openCashRegister(amount: number) {
     mutate((state, userId) => openCashRegister(state, userId, amount));
   },
-  async closeCashRegister(amount: number) {
-    mutate((state, userId) => closeCashRegister(state, userId, amount));
+  async closeCashRegister(amount: number, note?: string) {
+    mutate((state, userId) => closeCashRegister(state, userId, amount, note));
   },
   async registerCashMovement(type: "supply" | "withdrawal", amount: number, note: string) {
     mutate((state, userId) => addCashMovement(state, userId, type, amount, note));

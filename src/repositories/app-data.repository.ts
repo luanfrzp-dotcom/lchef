@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import type {
   AppState,
+  CashClosingSummary,
   CashMovement,
   CashStatus,
   FinancialRecord,
@@ -21,6 +22,38 @@ async function required<T>(
   const { data, error } = await promise;
   if (error) throw new Error(error.message);
   return data;
+}
+
+function readNumberField(source: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value.trim() !== "") return Number(value);
+  }
+  return 0;
+}
+
+function mapClosingSummary(value: unknown): CashClosingSummary | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const source = value as Record<string, unknown>;
+  return {
+    openingAmount: readNumberField(source, "opening_amount", "openingAmount"),
+    cashSales: readNumberField(source, "cash_sales", "cashSales"),
+    pixSales: readNumberField(source, "pix_sales", "pixSales"),
+    creditCardSales: readNumberField(source, "credit_card_sales", "creditCardSales"),
+    debitCardSales: readNumberField(source, "debit_card_sales", "debitCardSales"),
+    voucherSales: readNumberField(source, "voucher_sales", "voucherSales"),
+    supplies: readNumberField(source, "supplies"),
+    withdrawals: readNumberField(source, "withdrawals"),
+    cashExpenses: readNumberField(source, "cash_expenses", "cashExpenses"),
+    nonCashExpenses: readNumberField(source, "non_cash_expenses", "nonCashExpenses"),
+    cashReceivables: readNumberField(source, "cash_receivables", "cashReceivables"),
+    nonCashReceivables: readNumberField(source, "non_cash_receivables", "nonCashReceivables"),
+    expectedCash: readNumberField(source, "expected_cash", "expectedCash"),
+    totalSales: readNumberField(source, "total_sales", "totalSales"),
+    totalNonCashSales: readNumberField(source, "total_non_cash_sales", "totalNonCashSales"),
+    movementCount: readNumberField(source, "movement_count", "movementCount"),
+  };
 }
 
 export const appDataRepository = {
@@ -258,6 +291,7 @@ export const appDataRepository = {
         informedAmount: cash.informed_amount ?? undefined,
         expectedAmount: cash.expected_amount ?? undefined,
         difference: cash.difference ?? undefined,
+        closingSummary: mapClosingSummary(cash.closing_summary),
         movements: movementsByCash.get(cash.id) ?? [],
       })),
       financialRecords: [

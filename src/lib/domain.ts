@@ -127,7 +127,27 @@ export type CashRegister = {
   informedAmount?: number;
   expectedAmount?: number;
   difference?: number;
+  closingSummary?: CashClosingSummary;
   movements: CashMovement[];
+};
+
+export type CashClosingSummary = {
+  openingAmount: number;
+  cashSales: number;
+  pixSales: number;
+  creditCardSales: number;
+  debitCardSales: number;
+  voucherSales: number;
+  supplies: number;
+  withdrawals: number;
+  cashExpenses: number;
+  nonCashExpenses: number;
+  cashReceivables: number;
+  nonCashReceivables: number;
+  expectedCash: number;
+  totalSales: number;
+  totalNonCashSales: number;
+  movementCount: number;
 };
 
 export type InventoryMovement = {
@@ -390,6 +410,72 @@ export function getOpenCashRegister(state: AppState, unitId?: string) {
   );
 }
 
+const blankCashClosingSummary = (): CashClosingSummary => ({
+  openingAmount: 0,
+  cashSales: 0,
+  pixSales: 0,
+  creditCardSales: 0,
+  debitCardSales: 0,
+  voucherSales: 0,
+  supplies: 0,
+  withdrawals: 0,
+  cashExpenses: 0,
+  nonCashExpenses: 0,
+  cashReceivables: 0,
+  nonCashReceivables: 0,
+  expectedCash: 0,
+  totalSales: 0,
+  totalNonCashSales: 0,
+  movementCount: 0,
+});
+
+export function cashClosingSummary(cash: CashRegister): CashClosingSummary {
+  const summary = blankCashClosingSummary();
+
+  for (const movement of cash.movements) {
+    if (movement.type === "closing") continue;
+
+    summary.movementCount += 1;
+    const amount = movement.amount;
+    const method = movement.method ?? "cash";
+
+    if (movement.type === "opening") summary.openingAmount += amount;
+    if (movement.type === "supply") summary.supplies += amount;
+    if (movement.type === "withdrawal") summary.withdrawals += amount;
+
+    if (movement.type === "expense") {
+      if (method === "cash") summary.cashExpenses += amount;
+      else summary.nonCashExpenses += amount;
+    }
+
+    if (movement.type === "receivable") {
+      if (method === "cash") summary.cashReceivables += amount;
+      else summary.nonCashReceivables += amount;
+    }
+
+    if (movement.type === "sale") {
+      summary.totalSales += amount;
+      if (method === "cash") summary.cashSales += amount;
+      if (method === "pix") summary.pixSales += amount;
+      if (method === "credit_card") summary.creditCardSales += amount;
+      if (method === "debit_card") summary.debitCardSales += amount;
+      if (method === "voucher") summary.voucherSales += amount;
+    }
+  }
+
+  summary.totalNonCashSales =
+    summary.pixSales + summary.creditCardSales + summary.debitCardSales + summary.voucherSales;
+  summary.expectedCash =
+    summary.openingAmount +
+    summary.cashSales +
+    summary.supplies +
+    summary.cashReceivables -
+    summary.withdrawals -
+    summary.cashExpenses;
+
+  return summary;
+}
+
 export function openCashRegister(state: AppState, userId: string, openingAmount: number) {
   if (getOpenCashRegister(state)) {
     throw new Error("Ja existe um caixa aberto.");
@@ -421,21 +507,19 @@ export function openCashRegister(state: AppState, userId: string, openingAmount:
 }
 
 export function expectedCashAmount(cash: CashRegister) {
-  return cash.movements.reduce((total, movement) => {
-    if (movement.type === "opening" || movement.type === "supply") return total + movement.amount;
-    if (movement.type === "withdrawal" || movement.type === "expense")
-      return total - movement.amount;
-    if (movement.type === "sale" && movement.method === "cash") return total + movement.amount;
-    if (movement.type === "receivable" && movement.method === "cash")
-      return total + movement.amount;
-    return total;
-  }, 0);
+  return cashClosingSummary(cash).expectedCash;
 }
 
-export function closeCashRegister(state: AppState, userId: string, informedAmount: number) {
+export function closeCashRegister(
+  state: AppState,
+  userId: string,
+  informedAmount: number,
+  note = "Fechamento de caixa",
+) {
   const openCash = getOpenCashRegister(state);
   if (!openCash) throw new Error("Nao ha caixa aberto.");
-  const expectedAmount = expectedCashAmount(openCash);
+  const summary = cashClosingSummary(openCash);
+  const expectedAmount = summary.expectedCash;
   const closed: CashRegister = {
     ...openCash,
     status: "closed",
@@ -444,6 +528,7 @@ export function closeCashRegister(state: AppState, userId: string, informedAmoun
     informedAmount,
     expectedAmount,
     difference: informedAmount - expectedAmount,
+    closingSummary: summary,
     movements: [
       ...openCash.movements,
       {
@@ -451,7 +536,7 @@ export function closeCashRegister(state: AppState, userId: string, informedAmoun
         type: "closing",
         amount: informedAmount,
         method: "cash",
-        note: "Fechamento de caixa",
+        note,
         createdAt: todayIso(),
       },
     ],

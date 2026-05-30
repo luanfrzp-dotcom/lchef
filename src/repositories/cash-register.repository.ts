@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import type {
+  CashClosingSummary,
   CashMovementPayload,
   CloseCashRegisterPayload,
   OpenCashRegisterPayload,
@@ -16,11 +17,16 @@ export const cashRegisterRepository = {
     );
   },
   async close(payload: CloseCashRegisterPayload) {
-    if (!isSupabaseConfigured) return demoRepository.closeCashRegister(payload.informed_amount);
-    return callRpc<{ cash_register_id: string; expected_amount: number; difference: number }>(
-      "rpc_close_cash_register",
-      payload,
-    );
+    if (!isSupabaseConfigured) {
+      return demoRepository.closeCashRegister(payload.informed_amount, payload.closing_note);
+    }
+    return callRpc<{
+      cash_register_id: string;
+      expected_amount: number;
+      informed_amount: number;
+      difference: number;
+      summary: CashClosingSummary;
+    }>("rpc_close_cash_register", payload);
   },
   async registerMovement(payload: CashMovementPayload) {
     if (!isSupabaseConfigured) {
